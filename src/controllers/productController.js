@@ -1,0 +1,142 @@
+const pool = require('../config/db');
+
+// Listar productos
+const getProducts = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM products ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
+};
+
+// Obtener producto por ID
+const getProductById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener producto' });
+  }
+};
+
+// Crear producto
+const createProduct = async (req, res) => {
+  const { name, category, price, stock, description } = req.body;
+
+  if (!name || !price) {
+    return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO products (name, category, price, stock, description)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [name, category || 'otro', price, stock || 0, description]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear producto' });
+  }
+};
+
+// Actualizar producto
+const updateProduct = async (req, res) => {
+  const { id } = req.params;
+  const { name, category, price, stock, description } = req.body;
+
+  if (!name || !price) {
+    return res.status(400).json({ error: 'Nombre y precio son obligatorios' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE products SET name=$1, category=$2, price=$3, stock=$4, description=$5
+       WHERE id=$6 RETURNING *`,
+      [name, category, price, stock, description, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar producto' });
+  }
+};
+
+// Eliminar producto
+const deleteProduct = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      'DELETE FROM products WHERE id=$1 RETURNING *', [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+    res.json({ message: 'Producto eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+};
+
+// Vender producto (descuenta stock)
+const sellProduct = async (req, res) => {
+  const { product_id, quantity, owner_id } = req.body;
+
+  if (!product_id || !quantity) {
+    return res.status(400).json({ error: 'Producto y cantidad son obligatorios' });
+  }
+
+  try {
+    const product = await pool.query(
+      'SELECT * FROM products WHERE id = $1', [product_id]
+    );
+
+    if (product.rows.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    if (product.rows[0].stock < quantity) {
+      return res.status(400).json({ error: 'Stock insuficiente' });
+    }
+
+    const total = product.rows[0].price * quantity;
+
+    // Registrar venta
+    const sale = await pool.query(
+      `INSERT INTO sales (product_id, owner_id, groomer_id, quantity, total)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [product_id, owner_id, req.user.id, quantity, total]
+    );
+
+    // Descontar stock
+    await pool.query(
+      'UPDATE products SET stock = stock - $1 WHERE id = $2',
+      [quantity, product_id]
+    );
+
+    res.status(201).json({
+      message: 'Venta registrada',
+      sale: sale.rows[0],
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar venta' });
+  }
+};
+
+module.exports = {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  sellProduct
+};
