@@ -47,7 +47,7 @@ const getPetById = async (req, res) => {
 
 // Crear mascota
 const createPet = async (req, res) => {
-  const { name, breed, owner_id, notes } = req.body;
+  const { name, breed, owner_id, notes, photo_url } = req.body;
 
   if (!name || !breed || !owner_id) {
     return res.status(400).json({ error: 'Nombre, raza y dueño son obligatorios' });
@@ -60,8 +60,8 @@ const createPet = async (req, res) => {
     }
 
     const result = await pool.query(
-      'INSERT INTO pets (name, breed, owner_id, notes) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, breed, owner_id, notes]
+      'INSERT INTO pets (name, breed, owner_id, notes, photo_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [name, breed, owner_id, notes, photo_url]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -72,7 +72,7 @@ const createPet = async (req, res) => {
 // Actualizar mascota
 const updatePet = async (req, res) => {
   const { id } = req.params;
-  const { name, breed, notes } = req.body;
+  const { name, breed, notes, photo_url } = req.body;
 
   if (!name || !breed) {
     return res.status(400).json({ error: 'Nombre y raza son obligatorios' });
@@ -80,8 +80,8 @@ const updatePet = async (req, res) => {
 
   try {
     const result = await pool.query(
-      'UPDATE pets SET name=$1, breed=$2, notes=$3 WHERE id=$4 RETURNING *',
-      [name, breed, notes, id]
+      'UPDATE pets SET name=$1, breed=$2, notes=$3, photo_url=$4 WHERE id=$5 RETURNING *',
+      [name, breed, notes, photo_url, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Mascota no encontrada' });

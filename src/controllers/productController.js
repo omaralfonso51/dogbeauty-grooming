@@ -95,9 +95,7 @@ const sellProduct = async (req, res) => {
   }
 
   try {
-    const product = await pool.query(
-      'SELECT * FROM products WHERE id = $1', [product_id]
-    );
+    const product = await pool.query('SELECT * FROM products WHERE id = $1', [product_id]);
 
     if (product.rows.length === 0) {
       return res.status(404).json({ error: 'Producto no encontrado' });
@@ -107,13 +105,19 @@ const sellProduct = async (req, res) => {
       return res.status(400).json({ error: 'Stock insuficiente' });
     }
 
-    const total = product.rows[0].price * quantity;
+    // Obtener commission_rate del groomer
+    const groomer = await pool.query(
+      'SELECT commission_rate FROM users WHERE id = $1', [req.user.id]
+    );
 
-    // Registrar venta
+    const total = product.rows[0].price * quantity;
+    const commission_amount = (total * groomer.rows[0].commission_rate) / 100;
+
+    // Registrar venta con comisión
     const sale = await pool.query(
-      `INSERT INTO sales (product_id, owner_id, groomer_id, quantity, total)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [product_id, owner_id, req.user.id, quantity, total]
+      `INSERT INTO sales (product_id, owner_id, groomer_id, quantity, total, commission_amount)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [product_id, owner_id, req.user.id, quantity, total, commission_amount]
     );
 
     // Descontar stock
@@ -125,7 +129,8 @@ const sellProduct = async (req, res) => {
     res.status(201).json({
       message: 'Venta registrada',
       sale: sale.rows[0],
-      total
+      total,
+      commission_amount
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al registrar venta' });

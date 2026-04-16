@@ -76,10 +76,10 @@ const createAppointment = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
     `, [pet_id, groomer_id, service_type, cut_id, date, price, notes]);
 
-    // Crear recordatorio automático 24 horas antes
+    // Crear recordatorio automático 24 horas antes con channel
     await pool.query(`
-      INSERT INTO reminders (appointment_id, reminder_date)
-      VALUES ($1, $2::timestamp - INTERVAL '24 hours')
+    INSERT INTO reminders (appointment_id, reminder_date, channel)
+    VALUES ($1, $2::timestamp - INTERVAL '24 hours', 'email')
     `, [result.rows[0].id, date]);
 
     res.status(201).json(result.rows[0]);
