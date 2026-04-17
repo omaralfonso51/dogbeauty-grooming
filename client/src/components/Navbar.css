@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --primary: #2C1810;
+  --secondary: #8B4513;
+  --accent: #D4A853;
+  --accent-light: #F5E6C8;
+  --bg: #FDF8F2;
+  --bg-card: #FFFFFF;
+  --text: #2C1810;
+  --text-light: #7A6555;
+  --border: #E8DDD0;
+  --success: #4CAF50;
+  --danger: #E53935;
+  --warning: #FF9800;
+  --shadow: 0 2px 12px rgba(44, 24, 16, 0.08);
+  --shadow-hover: 0 8px 24px rgba(44, 24, 16, 0.16);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  background: var(--primary);
+  padding: 0 2rem;
+  height: 64px;
+  gap: 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(44,24,16,0.3);
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  min-width: fit-content;
+}
+
+.brand-icon { font-size: 1.5rem; }
+
+.brand-name {
+  font-family: 'Playfair Display', serif;
+  color: var(--accent);
+  font-size: 1.3rem;
+  letter-spacing: 0.5px;
+}
+
+.navbar-links {
+  display: flex;
+  list-style: none;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.navbar-links a {
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  transition: all 0.2s;
+}
+
+.navbar-links a:hover,
+.navbar-links a.active {
+  background: rgba(212,168,83,0.2);
+  color: var(--accent);
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: fit-content;
+}
+
+.user-name {
+  color: white;
+  font-size: 0.875rem;
+}
+
+.user-role {
+  background: var(--accent);
+  color: var(--primary);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 0.35rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+}

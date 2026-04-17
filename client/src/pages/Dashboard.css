@@ -1,0 +1,127 @@
+.page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header { margin-bottom: 2rem; }
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: var(--primary);
+}
+.page-header p { color: var(--text-light); margin-top: 0.25rem; }
+
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  font-size: 1.1rem;
+  color: var(--text-light);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: box-shadow 0.2s;
+}
+
+.metric-card:hover { box-shadow: var(--shadow-hover); }
+.metric-card.accent { background: var(--primary); border-color: var(--primary); }
+.metric-card.accent .metric-value { color: var(--accent); }
+.metric-card.accent .metric-label { color: rgba(255,255,255,0.7); }
+
+.metric-icon { font-size: 2rem; }
+.metric-info { display: flex; flex-direction: column; gap: 0.2rem; }
+.metric-value { font-size: 1.4rem; font-weight: 600; color: var(--primary); }
+.metric-label { font-size: 0.8rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.card h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-list, .commission-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.status-item, .commission-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.pending { background: #FFF3E0; color: var(--warning); }
+.status-badge.completed { background: #E8F5E9; color: var(--success); }
+.status-badge.cancelled { background: #FFEBEE; color: var(--danger); }
+
+.status-count, .commission-amount {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.stock-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stock-badge {
+  background: #FFEBEE;
+  color: var(--danger);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+}
+
+.top-service {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--accent-light);
+  border-radius: var(--radius);
+}
+
+.service-name { font-weight: 600; text-transform: capitalize; }
+.service-count { color: var(--text-light); font-size: 0.9rem; }
+.empty-msg { color: var(--text-light); font-size: 0.9rem; font-style: italic; }
