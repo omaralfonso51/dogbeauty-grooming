@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './Dashboard.css';
@@ -9,14 +9,9 @@ const GroomerDashboard = () => {
   const [myCommissions, setMyCommissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadData(); }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [appts, reminders] = await Promise.all([
-        api.get('/appointments'),
-        api.get('/reminders')
-      ]);
+      const appts = await api.get('/appointments');
 
       // Filtrar solo las citas del groomer logueado
       const mine = appts.data.filter(a => a.groomer_id === user.id || a.groomer_name === user.name);
@@ -30,7 +25,9 @@ const GroomerDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleComplete = async (id) => {
     if (!window.confirm('¿Marcar esta cita como completada?')) return;
