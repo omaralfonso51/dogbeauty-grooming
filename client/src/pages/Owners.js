@@ -97,13 +97,24 @@ const Owners = () => {
       )}
 
       <div className="toolbar">
-        <input className="search-input" placeholder="Buscar por nombre, teléfono o email..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input
+          className="search-input"
+          placeholder="Buscar por nombre, teléfono o email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       <div className="table-wrapper">
         <table className="table">
           <thead>
-            <tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Registrado</th><th>Acciones</th></tr>
+            <tr>
+              <th>Nombre</th>
+              <th>Teléfono</th>
+              <th>Email</th>
+              <th>Registrado</th>
+              <th>Acciones</th>
+            </tr>
           </thead>
           <tbody>
             {filtered.map(o => (
@@ -111,9 +122,23 @@ const Owners = () => {
                 {editId === o.id ? (
                   <td colSpan="5">
                     <form onSubmit={handleUpdate} className="inline-edit-form">
-                      <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Nombre" required />
-                      <input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Teléfono" />
-                      <input type="email" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email (opcional)" />
+                      <input
+                        value={editForm.name}
+                        onChange={e => setEditForm({...editForm, name: e.target.value})}
+                        placeholder="Nombre *"
+                        required
+                      />
+                      <input
+                        value={editForm.phone}
+                        onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                        placeholder="Teléfono"
+                      />
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={e => setEditForm({...editForm, email: e.target.value})}
+                        placeholder="Email (opcional)"
+                      />
                       <button type="submit" className="btn-success btn-sm">✓ Guardar</button>
                       <button type="button" className="btn-secondary btn-sm" onClick={() => setEditId(null)}>✕ Cancelar</button>
                     </form>

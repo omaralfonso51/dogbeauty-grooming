@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { formatCOP } from '../services/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -19,29 +19,31 @@ const Dashboard = () => {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Dashboard</h1>
-        <p>Resumen general de DogBeauty Grooming</p>
+        <div>
+          <h1>Dashboard</h1>
+          <p>Resumen general de DogBeauty Grooming</p>
+        </div>
       </div>
 
       <div className="metrics-grid">
         <div className="metric-card accent">
           <div className="metric-icon">💰</div>
           <div className="metric-info">
-            <span className="metric-value">${data.income.total.toFixed(2)}</span>
+            <span className="metric-value">{formatCOP(data.income.total)}</span>
             <span className="metric-label">Ingresos Totales</span>
           </div>
         </div>
         <div className="metric-card">
           <div className="metric-icon">✂️</div>
           <div className="metric-info">
-            <span className="metric-value">${data.income.services.toFixed(2)}</span>
+            <span className="metric-value">{formatCOP(data.income.services)}</span>
             <span className="metric-label">Por Servicios</span>
           </div>
         </div>
         <div className="metric-card">
           <div className="metric-icon">🛒</div>
           <div className="metric-info">
-            <span className="metric-value">${data.income.products.toFixed(2)}</span>
+            <span className="metric-value">{formatCOP(data.income.products)}</span>
             <span className="metric-label">Por Productos</span>
           </div>
         </div>
@@ -70,19 +72,22 @@ const Dashboard = () => {
         <div className="card">
           <h3>Comisiones por Groomer</h3>
           <div className="commission-list">
-            {data.commissions_by_groomer.map(g => (
-              <div key={g.name} className="commission-item">
-                <span>{g.name}</span>
-                <span className="commission-amount">${parseFloat(g.total_commissions).toFixed(2)}</span>
-              </div>
-            ))}
+            {data.commissions_by_groomer.length === 0
+              ? <p className="empty-msg">Sin comisiones aún</p>
+              : data.commissions_by_groomer.map(g => (
+                <div key={g.name} className="commission-item">
+                  <span>{g.name}</span>
+                  <span className="commission-amount">{formatCOP(g.total_commissions)}</span>
+                </div>
+              ))
+            }
           </div>
         </div>
 
         <div className="card">
           <h3>⚠️ Stock Bajo</h3>
           {data.low_stock_products.length === 0
-            ? <p className="empty-msg">Todos los productos tienen stock suficiente</p>
+            ? <p className="empty-msg">Todos los productos tienen stock suficiente ✅</p>
             : data.low_stock_products.map(p => (
               <div key={p.name} className="stock-item">
                 <span>{p.name}</span>

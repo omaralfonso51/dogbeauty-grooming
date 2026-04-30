@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { formatCOP } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './Common.css';
 
 const Appointments = () => {
+  const { isAdmin } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [pets, setPets] = useState([]);
@@ -11,9 +13,9 @@ const Appointments = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     pet_id: '', groomer_id: '', service_type: 'baño',
     cut_id: '', date: '', price: '', notes: ''
@@ -34,20 +36,22 @@ const Appointments = () => {
 
   const loadData = async () => {
     try {
-      const [appts, petsRes, cutsRes] = await Promise.all([
+      const [appts, petsRes, cutsRes, groomersRes] = await Promise.all([
         api.get('/appointments'),
         api.get('/pets'),
-        api.get('/cuts')
+        api.get('/cuts'),
+        api.get('/auth/groomers')
       ]);
       setAppointments(appts.data);
+      setFiltered(appts.data);
       setPets(petsRes.data);
       setCuts(cutsRes.data);
-      const uniqueGroomers = [...new Map(
-        appts.data.filter(a => a.groomer_id).map(a => [a.groomer_id, { id: a.groomer_id, name: a.groomer_name }])
-      ).values()];
-      setGroomers(uniqueGroomers);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+      setGroomers(groomersRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -61,7 +65,9 @@ const Appointments = () => {
       setShowForm(false);
       setForm({ pet_id: '', groomer_id: '', service_type: 'baño', cut_id: '', date: '', price: '', notes: '' });
       loadData();
-    } catch (err) { alert(err.response?.data?.error || 'Error al crear cita'); }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al crear cita');
+    }
   };
 
   const handleEdit = (a) => {
@@ -84,7 +90,9 @@ const Appointments = () => {
       });
       setEditId(null);
       loadData();
-    } catch (err) { alert(err.response?.data?.error || 'Error al actualizar'); }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al actualizar');
+    }
   };
 
   const handleComplete = async (id) => {
@@ -104,7 +112,10 @@ const Appointments = () => {
   return (
     <div className="page">
       <div className="page-header">
-        <div><h1>Agenda de Citas</h1><p>{appointments.length} citas registradas</p></div>
+        <div>
+          <h1>Agenda de Citas</h1>
+          <p>{appointments.length} citas registradas</p>
+        </div>
         <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancelar' : '+ Nueva Cita'}
         </button>
@@ -115,17 +126,19 @@ const Appointments = () => {
           <h3>Nueva Cita</h3>
           <form onSubmit={handleSubmit} className="grid-form">
             <div className="form-group">
-              <label>Mascota</label>
+              <label>Mascota *</label>
               <select value={form.pet_id} onChange={e => setForm({...form, pet_id: e.target.value})} required>
                 <option value="">Seleccionar mascota</option>
                 {pets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.breed})</option>)}
               </select>
             </div>
             <div className="form-group">
-              <label>Groomer</label>
+              <label>Groomer *</label>
               <select value={form.groomer_id} onChange={e => setForm({...form, groomer_id: e.target.value})} required>
                 <option value="">Seleccionar groomer</option>
-                {groomers.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                {groomers.map(g => (
+                  <option key={g.id} value={g.id}>{g.name} — {g.commission_rate}% comisión</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -144,12 +157,12 @@ const Appointments = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Fecha y Hora</label>
+              <label>Fecha y Hora *</label>
               <input type="datetime-local" value={form.date} onChange={e => setForm({...form, date: e.target.value})} required />
             </div>
             <div className="form-group">
-              <label>Precio ($)</label>
-              <input type="number" step="0.01" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required />
+              <label>Precio (COP) *</label>
+              <input type="number" step="100" value={form.price} onChange={e => setForm({...form, price: e.target.value})} placeholder="Ej: 50000" required />
             </div>
             <div className="form-group full-width">
               <label>Notas</label>
@@ -170,16 +183,26 @@ const Appointments = () => {
             </button>
           ))}
         </div>
-        <input className="search-input" placeholder="Buscar por mascota, dueño o groomer..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input
+          className="search-input"
+          placeholder="Buscar por mascota, dueño o groomer..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       <div className="table-wrapper">
         <table className="table">
           <thead>
             <tr>
-              <th>Mascota</th><th>Dueño</th><th>Groomer</th>
-              <th>Servicio</th><th>Fecha</th><th>Precio</th>
-              <th>Estado</th><th>Acciones</th>
+              <th>Mascota</th>
+              <th>Dueño</th>
+              <th>Groomer</th>
+              <th>Servicio</th>
+              <th>Fecha</th>
+              <th>Precio</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -197,21 +220,37 @@ const Appointments = () => {
                         <option value="">Sin corte</option>
                         {cuts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
-                      <input type="datetime-local" value={editForm.date} onChange={e => setEditForm({...editForm, date: e.target.value})} required />
-                      <input type="number" step="0.01" value={editForm.price} onChange={e => setEditForm({...editForm, price: e.target.value})} placeholder="Precio" required />
-                      <input value={editForm.notes} onChange={e => setEditForm({...editForm, notes: e.target.value})} placeholder="Notas" />
+                      <input
+                        type="datetime-local"
+                        value={editForm.date}
+                        onChange={e => setEditForm({...editForm, date: e.target.value})}
+                        required
+                      />
+                      <input
+                        type="number"
+                        step="100"
+                        value={editForm.price}
+                        onChange={e => setEditForm({...editForm, price: e.target.value})}
+                        placeholder="Precio"
+                        required
+                      />
+                      <input
+                        value={editForm.notes}
+                        onChange={e => setEditForm({...editForm, notes: e.target.value})}
+                        placeholder="Notas"
+                      />
                       <button type="submit" className="btn-success btn-sm">✓ Guardar</button>
                       <button type="button" className="btn-secondary btn-sm" onClick={() => setEditId(null)}>✕ Cancelar</button>
                     </form>
                   </td>
                 ) : (
                   <>
-                    <td><strong>{a.pet_name}</strong><br/><small>{a.breed}</small></td>
+                    <td><strong>{a.pet_name}</strong><br /><small>{a.breed}</small></td>
                     <td>{a.owner_name}</td>
                     <td>{a.groomer_name}</td>
                     <td className="capitalize">{a.service_type}</td>
                     <td>{new Date(a.date).toLocaleString('es-CO')}</td>
-                    <td>${parseFloat(a.price).toFixed(2)}</td>
+                    <td>{formatCOP(a.price)}</td>
                     <td><span className={`status-badge ${a.status}`}>{a.status}</span></td>
                     <td>
                       <div className="action-btns">

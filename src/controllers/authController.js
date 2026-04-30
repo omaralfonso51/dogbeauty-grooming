@@ -72,4 +72,77 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+// OBTENER PERFIL PROPIO
+const getProfile = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, email, role, commission_rate, photo_url, created_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener perfil' });
+  }
+};
+
+// ACTUALIZAR PERFIL PROPIO
+const updateProfile = async (req, res) => {
+  const { name, email, password, photo_url } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Nombre y email son obligatorios' });
+  }
+  try {
+    let query, params;
+    if (password) {
+      const hashed = await bcrypt.hash(password, 10);
+      query = 'UPDATE users SET name=$1, email=$2, password=$3, photo_url=$4 WHERE id=$5 RETURNING id, name, email, role, commission_rate, photo_url, created_at';
+      params = [name, email, hashed, photo_url, req.user.id];
+    } else {
+      query = 'UPDATE users SET name=$1, email=$2, photo_url=$3 WHERE id=$4 RETURNING id, name, email, role, commission_rate, photo_url, created_at';
+      params = [name, email, photo_url, req.user.id];
+    }
+    const result = await pool.query(query, params);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar perfil' });
+  }
+};
+
+// REGISTRAR GROOMER (solo admin)
+const registerGroomer = async (req, res) => {
+  const { name, email, password, commission_rate } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Nombre, email y contraseña son obligatorios' });
+  }
+  try {
+    const exists = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (exists.rows.length > 0) {
+      return res.status(400).json({ error: 'El email ya está registrado' });
+    }
+    const hashed = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (name, email, password, role, commission_rate) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, commission_rate',
+      [name, email, hashed, 'groomer', commission_rate || 0]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar groomer' });
+  }
+};
+
+// LISTAR GROOMERS — fix para que aparezcan en el select de citas
+const getGroomers = async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, email, commission_rate FROM users WHERE role = 'groomer' ORDER BY name ASC"
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener groomers' });
+  }
+};
+
+module.exports = { register, login, getProfile, updateProfile, registerGroomer, getGroomers };

@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { register, login } = require('../controllers/authController');
-const { verifyToken } = require('../middleware/auth');
+const { register, login, getProfile, updateProfile, registerGroomer, getGroomers } = require('../controllers/authController');
+const { verifyToken, isAdmin } = require('../middleware/auth');
 
 router.post('/register', register);
 router.post('/login', login);
+router.get('/me', verifyToken, getProfile);
+router.put('/profile', verifyToken, updateProfile);
+router.post('/groomers', verifyToken, isAdmin, registerGroomer);
+router.get('/groomers', verifyToken, getGroomers);
 
-// Ejemplo de ruta protegida
-router.get('/me', verifyToken, (req, res) => {
-  res.json({ message: 'Ruta protegida', user: req.user });
-});
+
 
 module.exports = router;

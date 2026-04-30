@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import GroomerDashboard from './pages/GroomerDashboard';
 import Appointments from './pages/Appointments';
@@ -10,6 +11,8 @@ import Owners from './pages/Owners';
 import Products from './pages/Products';
 import Cuts from './pages/Cuts';
 import Reminders from './pages/Reminders';
+import Profile from './pages/Profile';
+import Groomers from './pages/Groomers';
 
 const PrivateRoute = ({ children, adminOnly }) => {
   const { user, loading, isAdmin } = useAuth();
@@ -35,8 +38,9 @@ const AppRoutes = () => {
   const { user } = useAuth();
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-      <Route path="/" element={<PrivateRoute><HomeRedirect /></PrivateRoute>} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={user ? <Navigate to="/app" /> : <Login />} />
+      <Route path="/app" element={<PrivateRoute><HomeRedirect /></PrivateRoute>} />
       <Route path="/dashboard" element={<PrivateRoute adminOnly><Layout><Dashboard /></Layout></PrivateRoute>} />
       <Route path="/groomer" element={<PrivateRoute><Layout><GroomerDashboard /></Layout></PrivateRoute>} />
       <Route path="/appointments" element={<PrivateRoute><Layout><Appointments /></Layout></PrivateRoute>} />
@@ -45,6 +49,8 @@ const AppRoutes = () => {
       <Route path="/products" element={<PrivateRoute><Layout><Products /></Layout></PrivateRoute>} />
       <Route path="/cuts" element={<PrivateRoute><Layout><Cuts /></Layout></PrivateRoute>} />
       <Route path="/reminders" element={<PrivateRoute adminOnly><Layout><Reminders /></Layout></PrivateRoute>} />
+      <Route path="/groomers" element={<PrivateRoute adminOnly><Layout><Groomers /></Layout></PrivateRoute>} />
+      <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
