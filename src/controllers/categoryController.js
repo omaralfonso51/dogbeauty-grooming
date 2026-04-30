@@ -42,11 +42,25 @@ const updateCategory = async (req, res) => {
 const deleteCategory = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      'DELETE FROM categories WHERE id=$1 RETURNING *', [id]
+    // Primero obtener el nombre de la categoría
+    const cat = await pool.query('SELECT name FROM categories WHERE id=$1', [id]);
+    if (cat.rows.length === 0) {
+      return res.status(404).json({ error: 'Categoría no encontrada' });
+    }
+
+    // Verificar si hay productos con esta categoría
+    const products = await pool.query(
+      'SELECT COUNT(*) FROM products WHERE category=$1', [cat.rows[0].name]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Categoría no encontrada' });
-    res.json({ message: 'Categoría eliminada' });
+
+    if (parseInt(products.rows[0].count) > 0) {
+      return res.status(400).json({
+        error: `No puedes eliminar esta categoría porque tiene ${products.rows[0].count} producto(s) asociado(s). Cambia la categoría de esos productos primero.`
+      });
+    }
+
+    await pool.query('DELETE FROM categories WHERE id=$1', [id]);
+    res.json({ message: 'Categoría eliminada correctamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar categoría' });
   }

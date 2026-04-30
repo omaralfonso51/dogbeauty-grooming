@@ -3,6 +3,7 @@ import api, { formatCOP } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import './Common.css';
+import ImportCSV from '../components/ImportCSV';
 
 const CutModal = ({ cut, onClose, onEdit, onDelete, isAdmin }) => (
   <div className="card-modal-overlay" onClick={onClose}>
@@ -192,6 +193,19 @@ const Cuts = () => {
           </button>
         )}
       </div>
+
+      {isAdmin && (
+        <ImportCSV
+          endpoint="/import/cuts"
+          entityName="cortes"
+          templateHeaders={['name', 'breed', 'description', 'price', 'image_url']}
+          onSuccess={loadData}
+          warnings={[
+            'Solo el nombre es obligatorio',
+            'Los cortes con el mismo nombre y raza serán omitidos'
+          ]}
+        />
+      )}
 
       {/* FORM */}
       {showForm && isAdmin && (

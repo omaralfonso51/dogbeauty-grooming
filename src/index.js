@@ -13,6 +13,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const importRoutes = require('./routes/importRoutes');
 
 const app = express();
 app.use(cors());
@@ -32,6 +33,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/import', importRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

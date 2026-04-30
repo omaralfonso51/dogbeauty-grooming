@@ -3,6 +3,7 @@ import api, { formatCOP } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import './Common.css';
+import ImportCSV from '../components/ImportCSV';
 
 const Products = () => {
   const { isAdmin } = useAuth();
@@ -197,6 +198,20 @@ const Products = () => {
             ))}
           </div>
         </div>
+      )}
+
+       {isAdmin && (
+        <ImportCSV
+          endpoint="/import/products"
+          entityName="productos"
+          templateHeaders={['name', 'price', 'category', 'stock', 'description', 'image_url']}
+          onSuccess={loadData}
+          warnings={[
+            'El precio es obligatorio y debe ser un número (ej: 25000)',
+            'La categoría debe existir previamente en el sistema',
+            'Los productos con el mismo nombre serán omitidos'
+          ]}
+        />
       )}
 
       {/* FORMULARIO NUEVO PRODUCTO */}

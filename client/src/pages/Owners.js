@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import './Common.css';
+import ImportCSV from '../components/ImportCSV';
 
 const Owners = () => {
   const [owners, setOwners] = useState([]);
@@ -73,6 +74,19 @@ const Owners = () => {
         </button>
       </div>
 
+      {
+        <ImportCSV
+          endpoint="/import/owners"
+          entityName="dueños"
+          templateHeaders={['name', 'phone', 'email']}
+          onSuccess={loadData}
+          warnings={[
+            'Solo el nombre es obligatorio',
+            'Los dueños con el mismo email serán omitidos'
+          ]}
+        />
+      }
+      
       {showForm && (
         <div className="card form-card">
           <h3>Nuevo Dueño</h3>

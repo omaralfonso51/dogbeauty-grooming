@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import './Common.css';
+import ImportCSV from '../components/ImportCSV';
 
 const PetModal = ({ pet, onClose, onEdit, onDelete, isAdmin }) => (
   <div className="card-modal-overlay" onClick={onClose}>
@@ -128,6 +129,18 @@ const Pets = () => {
           {showForm ? 'Cancelar' : '+ Nueva Mascota'}
         </button>
       </div>
+
+      <ImportCSV
+        endpoint="/import/pets"
+        entityName="mascotas"
+        templateHeaders={['name', 'breed', 'owner_email', 'owner_name', 'notes', 'photo_url']}
+        onSuccess={loadData}
+        warnings={[
+          '⚠️ Los dueños deben estar creados ANTES de importar mascotas',
+          'Usa owner_email (recomendado) u owner_name para asociar la mascota al dueño',
+          'Si el dueño no se encuentra, la mascota será omitida'
+        ]}
+      />
 
       {showForm && (
         <div className="card form-card">
