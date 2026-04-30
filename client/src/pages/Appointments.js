@@ -75,6 +75,7 @@ const Appointments = () => {
     setEditForm({
       service_type: a.service_type,
       cut_id: a.cut_id || '',
+      groomer_id: a.groomer_id || '',
       date: new Date(a.date).toISOString().slice(0, 16),
       price: a.price,
       notes: a.notes || ''
@@ -87,6 +88,7 @@ const Appointments = () => {
       await api.put(`/appointments/${editId}`, {
         ...editForm,
         cut_id: editForm.cut_id === '' ? null : editForm.cut_id,
+        groomer_id: editForm.groomer_id === '' ? null : editForm.groomer_id,
       });
       setEditId(null);
       loadData();
@@ -211,6 +213,10 @@ const Appointments = () => {
                 {editId === a.id ? (
                   <td colSpan="8">
                     <form onSubmit={handleUpdate} className="inline-edit-form">
+                      <select value={editForm.groomer_id} onChange={e => setEditForm({...editForm, groomer_id: e.target.value})}>
+                        <option value="">Sin groomer</option>
+                        {groomers.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
                       <select value={editForm.service_type} onChange={e => setEditForm({...editForm, service_type: e.target.value})}>
                         <option value="baño">Baño</option>
                         <option value="corte">Corte</option>
@@ -220,25 +226,9 @@ const Appointments = () => {
                         <option value="">Sin corte</option>
                         {cuts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
-                      <input
-                        type="datetime-local"
-                        value={editForm.date}
-                        onChange={e => setEditForm({...editForm, date: e.target.value})}
-                        required
-                      />
-                      <input
-                        type="number"
-                        step="100"
-                        value={editForm.price}
-                        onChange={e => setEditForm({...editForm, price: e.target.value})}
-                        placeholder="Precio"
-                        required
-                      />
-                      <input
-                        value={editForm.notes}
-                        onChange={e => setEditForm({...editForm, notes: e.target.value})}
-                        placeholder="Notas"
-                      />
+                      <input type="datetime-local" value={editForm.date} onChange={e => setEditForm({...editForm, date: e.target.value})} required />
+                      <input type="number" step="100" value={editForm.price} onChange={e => setEditForm({...editForm, price: e.target.value})} placeholder="Precio COP" required />
+                      <input value={editForm.notes} onChange={e => setEditForm({...editForm, notes: e.target.value})} placeholder="Notas" />
                       <button type="submit" className="btn-success btn-sm">✓ Guardar</button>
                       <button type="button" className="btn-secondary btn-sm" onClick={() => setEditId(null)}>✕ Cancelar</button>
                     </form>

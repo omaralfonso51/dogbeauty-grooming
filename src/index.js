@@ -12,13 +12,11 @@ const cutRoutes = require('./routes/cutRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// Servir imágenes subidas
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.get('/', (req, res) => {
   res.json({ message: 'DogBeauty API funcionando ✅' });
@@ -33,6 +31,7 @@ app.use('/api/cuts', cutRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/categories', categoryRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

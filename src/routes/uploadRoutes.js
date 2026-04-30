@@ -7,8 +7,7 @@ router.post('/', verifyToken, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No se subió ninguna imagen' });
   }
-  const imageUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/uploads/${req.file.filename}`;
-  res.json({ url: imageUrl });
+  res.json({ url: req.file.path });
 });
 
 module.exports = router;
