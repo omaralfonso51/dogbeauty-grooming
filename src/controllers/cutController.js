@@ -89,6 +89,12 @@ const deleteCut = async (req, res) => {
     }
     res.json({ message: 'Corte eliminado correctamente' });
   } catch (error) {
+    // Captura específica del error de foreign key de PostgreSQL
+    if (error.code === '23503') {
+      return res.status(400).json({
+        error: 'No puedes eliminar este corte porque tiene citas asociadas. Primero cancela o elimina las citas relacionadas.'
+      });
+    }
     res.status(500).json({ error: 'Error al eliminar corte' });
   }
 };

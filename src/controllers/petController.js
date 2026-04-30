@@ -92,18 +92,29 @@ const updatePet = async (req, res) => {
   }
 };
 
-// Eliminar mascota
+// ✅ Eliminar mascota (CON FIX)
 const deletePet = async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
       'DELETE FROM pets WHERE id=$1 RETURNING *', [id]
     );
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Mascota no encontrada' });
     }
+
     res.json({ message: 'Mascota eliminada correctamente' });
+
   } catch (error) {
+
+    // 🔥 AQUÍ ESTÁ EL FIX IMPORTANTE
+    if (error.code === '23503') {
+      return res.status(400).json({
+        error: 'No puedes eliminar esta mascota porque tiene citas asociadas. Primero elimina las citas.'
+      });
+    }
+
     res.status(500).json({ error: 'Error al eliminar mascota' });
   }
 };

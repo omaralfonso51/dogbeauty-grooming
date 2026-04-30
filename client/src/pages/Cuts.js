@@ -151,20 +151,13 @@ const Cuts = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+    const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar este corte?')) return;
-
     try {
       await api.delete(`/cuts/${id}`);
       loadData();
     } catch (err) {
-      const msg = err.response?.data?.error || '';
-
-      if (msg.includes('foreign key')) {
-        alert('No puedes eliminar este corte porque tiene citas asociadas');
-      } else {
-        alert(msg || 'Error');
-      }
+      alert(err.response?.data?.error || 'Error al eliminar');
     }
   };
 
