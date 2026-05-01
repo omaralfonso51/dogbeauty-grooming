@@ -28,4 +28,3 @@ dist
 .env.production
 .env.local
 client-old/
-client/
