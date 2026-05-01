@@ -13,6 +13,7 @@ import Cuts from './pages/Cuts';
 import Reminders from './pages/Reminders';
 import Profile from './pages/Profile';
 import Groomers from './pages/Groomers';
+import ImportHistory from './pages/ImportHistory';
 
 const PrivateRoute = ({ children, adminOnly }) => {
   const { user, loading, isAdmin } = useAuth();
@@ -52,6 +53,7 @@ const AppRoutes = () => {
       <Route path="/groomers" element={<PrivateRoute adminOnly><Layout><Groomers /></Layout></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
+      <Route path="/import-history" element={<PrivateRoute adminOnly><Layout><ImportHistory /></Layout></PrivateRoute>} />
     </Routes>
   );
 };

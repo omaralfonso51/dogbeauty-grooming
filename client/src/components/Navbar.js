@@ -42,6 +42,7 @@ const Navbar = () => {
           <>
             <li><Link to="/reminders" className={isActive('/reminders')}>Recordatorios</Link></li>
             <li><Link to="/groomers" className={isActive('/groomers')}>Groomers</Link></li>
+            <li><Link to="/import-history" className={isActive('/import-history')}>📦 Importaciones</Link></li>
           </>
         )}
       </ul>
