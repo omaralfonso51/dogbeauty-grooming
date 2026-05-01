@@ -2,11 +2,75 @@ import { useState, useEffect } from 'react';
 import api, { formatCOP } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
-import './Common.css';
 import ImportCSV from '../components/ImportCSV';
+import BulkActions from '../components/BulkActions';
+import './Common.css';
 
+// =============================================
+// MODAL DE PRODUCTO
+// =============================================
+const ProductModal = ({ product, onClose, onEdit, onDelete, isAdmin }) => (
+  <div className="card-modal-overlay" onClick={onClose}>
+    <div className="card-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+      <div style={{
+        position: 'relative', width: '100%', paddingTop: '66%',
+        overflow: 'hidden', borderRadius: '16px 16px 0 0'
+      }}>
+        {product.image_url
+          ? <img
+              src={product.image_url}
+              alt={product.name}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          : <div style={{
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              background: 'var(--accent-light)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: '6rem'
+            }}>🛍️</div>
+        }
+      </div>
+      <div className="card-modal-body">
+        <h2>{product.name}</h2>
+        <span className="category-badge" style={{ textTransform: 'capitalize' }}>{product.category}</span>
+        {product.description && (
+          <div className="modal-detail" style={{ marginTop: '0.75rem' }}>
+            <strong>Descripción:</strong> {product.description}
+          </div>
+        )}
+        <div className="card-modal-price">{formatCOP(product.price)}</div>
+        <div className="modal-detail">
+          <strong>Stock:</strong>
+          <span style={{
+            color: product.stock < 10 ? 'var(--danger)' : 'var(--success)',
+            fontWeight: 600, marginLeft: '0.5rem'
+          }}>
+            {product.stock} unidades {product.stock < 10 ? '⚠️ Stock bajo' : '✅'}
+          </span>
+        </div>
+      </div>
+      <div className="card-modal-footer">
+        {isAdmin && (
+          <>
+            <button className="btn-secondary btn-sm" onClick={() => { onEdit(product); onClose(); }}>
+              ✏️ Editar
+            </button>
+            <button className="btn-danger btn-sm" onClick={() => { onDelete(product.id); onClose(); }}>
+              🗑️ Eliminar
+            </button>
+          </>
+        )}
+        <button className="btn-primary" onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  </div>
+);
+
+// =============================================
+// COMPONENTE PRINCIPAL
+// =============================================
 const Products = () => {
   const { isAdmin } = useAuth();
+
   const [products, setProducts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -20,12 +84,16 @@ const Products = () => {
   const [editCatId, setEditCatId] = useState(null);
   const [editCatName, setEditCatName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [owners, setOwners] = useState([]);
+  const [sellForm, setSellForm] = useState({ quantity: 1, owner_id: '' });
+
   const [form, setForm] = useState({
     name: '', category: '', price: '',
     stock: '', description: '', image_url: ''
   });
-  const [sellForm, setSellForm] = useState({ quantity: 1, owner_id: '' });
-  const [owners, setOwners] = useState([]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -36,8 +104,29 @@ const Products = () => {
       p.category?.toLowerCase().includes(search.toLowerCase()) ||
       p.description?.toLowerCase().includes(search.toLowerCase())
     ));
+    setSelected([]);
+    setSelectAll(false);
   }, [products, search]);
 
+  // =============================================
+  // FUNCIONES SELECCIÓN MÚLTIPLE
+  // =============================================
+  const toggleSelect = (id) =>
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelected([]);
+      setSelectAll(false);
+    } else {
+      setSelected(filtered.map(p => p.id));
+      setSelectAll(true);
+    }
+  };
+
+  // =============================================
+  // CARGA DE DATOS
+  // =============================================
   const loadData = async () => {
     try {
       const [prodRes, ownersRes, catsRes] = await Promise.all([
@@ -56,8 +145,13 @@ const Products = () => {
     finally { setLoading(false); }
   };
 
+  // =============================================
+  // CRUD PRODUCTOS
+  // =============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.name?.trim()) return alert('El nombre es obligatorio');
+    if (!form.price || parseFloat(form.price) <= 0) return alert('El precio debe ser mayor a 0');
     try {
       await api.post('/products', form);
       setShowForm(false);
@@ -78,6 +172,8 @@ const Products = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (!editForm.name?.trim()) return alert('El nombre es obligatorio');
+    if (!editForm.price || parseFloat(editForm.price) <= 0) return alert('El precio debe ser mayor a 0');
     try {
       await api.put(`/products/${editId}`, editForm);
       setEditId(null);
@@ -93,19 +189,24 @@ const Products = () => {
 
   const handleSell = async (e) => {
     e.preventDefault();
+    if (parseInt(sellForm.quantity) <= 0) return alert('La cantidad debe ser mayor a 0');
     try {
       await api.post('/products/sell', { product_id: showSell, ...sellForm });
       setShowSell(null);
       setSellForm({ quantity: 1, owner_id: '' });
       loadData();
-      alert('Venta registrada exitosamente');
+      alert('✅ Venta registrada exitosamente');
     } catch (err) { alert(err.response?.data?.error || 'Error'); }
   };
 
+  // =============================================
+  // CRUD CATEGORÍAS
+  // =============================================
   const handleCreateCat = async (e) => {
     e.preventDefault();
+    if (!newCat.trim()) return alert('El nombre de la categoría es obligatorio');
     try {
-      await api.post('/categories', { name: newCat });
+      await api.post('/categories', { name: newCat.trim() });
       setNewCat('');
       loadData();
     } catch (err) { alert(err.response?.data?.error || 'Error'); }
@@ -113,8 +214,9 @@ const Products = () => {
 
   const handleUpdateCat = async (e) => {
     e.preventDefault();
+    if (!editCatName.trim()) return alert('El nombre es obligatorio');
     try {
-      await api.put(`/categories/${editCatId}`, { name: editCatName });
+      await api.put(`/categories/${editCatId}`, { name: editCatName.trim() });
       setEditCatId(null);
       setEditCatName('');
       loadData();
@@ -122,7 +224,7 @@ const Products = () => {
   };
 
   const handleDeleteCat = async (id) => {
-    if (!window.confirm('¿Eliminar esta categoría?')) return;
+    if (!window.confirm('¿Eliminar esta categoría? No podrás eliminarla si tiene productos asociados.')) return;
     try { await api.delete(`/categories/${id}`); loadData(); }
     catch (err) { alert(err.response?.data?.error || 'Error'); }
   };
@@ -131,8 +233,131 @@ const Products = () => {
 
   return (
     <div className="page">
+
+      {/* BULK ACTIONS - barra flotante de selección múltiple */}
+      <BulkActions
+        selectedIds={selected}
+        entityType="products"
+        onSuccess={loadData}
+        onClear={() => { setSelected([]); setSelectAll(false); }}
+      />
+
+      {/* MODAL VER PRODUCTO */}
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {/* MODAL VENTA */}
+      {showSell && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>🛒 Registrar Venta</h3>
+            <form onSubmit={handleSell} className="grid-form">
+              <div className="form-group">
+                <label>Cantidad *</label>
+                <input
+                  type="number" min="1"
+                  value={sellForm.quantity}
+                  onChange={e => setSellForm({...sellForm, quantity: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Cliente (opcional)</label>
+                <select
+                  value={sellForm.owner_id}
+                  onChange={e => setSellForm({...sellForm, owner_id: e.target.value})}
+                >
+                  <option value="">Sin cliente</option>
+                  {owners.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </div>
+              <div className="form-actions full-width">
+                <button type="submit" className="btn-primary">Confirmar Venta</button>
+                <button type="button" className="btn-secondary" onClick={() => setShowSell(null)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR PRODUCTO */}
+      {editId && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '550px' }}>
+            <h3>✏️ Editar Producto</h3>
+            <form onSubmit={handleUpdate} className="grid-form">
+              <div className="form-group">
+                <label>Nombre *</label>
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Categoría</label>
+                <select
+                  value={editForm.category}
+                  onChange={e => setEditForm({...editForm, category: e.target.value})}
+                >
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Precio (COP) *</label>
+                <input
+                  type="number" step="100"
+                  value={editForm.price}
+                  onChange={e => setEditForm({...editForm, price: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Stock</label>
+                <input
+                  type="number" min="0"
+                  value={editForm.stock}
+                  onChange={e => setEditForm({...editForm, stock: e.target.value})}
+                />
+              </div>
+              <div className="form-group full-width">
+                <label>Descripción</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={e => setEditForm({...editForm, description: e.target.value})}
+                  rows="2"
+                />
+              </div>
+              <div className="form-group full-width">
+                <label>Imagen del producto</label>
+                <ImageUpload
+                  value={editForm.image_url}
+                  onChange={url => setEditForm({...editForm, image_url: url})}
+                  placeholder="URL o sube una imagen"
+                />
+              </div>
+              <div className="form-actions full-width">
+                <button type="submit" className="btn-primary">Guardar cambios</button>
+                <button type="button" className="btn-secondary" onClick={() => setEditId(null)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* HEADER */}
       <div className="page-header">
-        <div><h1>Productos</h1><p>{products.length} productos en catálogo</p></div>
+        <div>
+          <h1>Productos</h1>
+          <p>{products.length} productos en catálogo</p>
+        </div>
         <div className="action-btns">
           {isAdmin && (
             <>
@@ -151,12 +376,19 @@ const Products = () => {
       {showCatManager && isAdmin && (
         <div className="card form-card">
           <h3>🏷️ Gestionar Categorías</h3>
-          <form onSubmit={handleCreateCat} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <form
+            onSubmit={handleCreateCat}
+            style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}
+          >
             <input
               value={newCat}
               onChange={e => setNewCat(e.target.value)}
               placeholder="Nueva categoría..."
-              style={{ flex: 1, padding: '0.6rem 1rem', border: '1.5px solid var(--border)', borderRadius: '10px', fontFamily: 'DM Sans, sans-serif', outline: 'none', minWidth: '150px' }}
+              style={{
+                flex: 1, padding: '0.6rem 1rem',
+                border: '1.5px solid var(--border)', borderRadius: '10px',
+                fontFamily: 'DM Sans, sans-serif', outline: 'none', minWidth: '150px'
+              }}
               required
             />
             <button type="submit" className="btn-primary">+ Agregar</button>
@@ -173,7 +405,10 @@ const Products = () => {
                     <input
                       value={editCatName}
                       onChange={e => setEditCatName(e.target.value)}
-                      style={{ padding: '0.2rem 0.5rem', border: '1px solid var(--border)', borderRadius: '6px', width: '100px', fontSize: '0.8rem' }}
+                      style={{
+                        padding: '0.2rem 0.5rem', border: '1px solid var(--border)',
+                        borderRadius: '6px', width: '100px', fontSize: '0.8rem'
+                      }}
                       required
                     />
                     <button type="submit" className="btn-success btn-sm">✓</button>
@@ -181,7 +416,12 @@ const Products = () => {
                   </form>
                 ) : (
                   <>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--secondary)', fontWeight: 500, textTransform: 'capitalize' }}>{cat.name}</span>
+                    <span style={{
+                      fontSize: '0.85rem', color: 'var(--secondary)',
+                      fontWeight: 500, textTransform: 'capitalize'
+                    }}>
+                      {cat.name}
+                    </span>
                     <button
                       className="btn-secondary btn-sm"
                       style={{ padding: '0.1rem 0.4rem', fontSize: '0.75rem' }}
@@ -196,11 +436,17 @@ const Products = () => {
                 )}
               </div>
             ))}
+            {categories.length === 0 && (
+              <p style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>
+                No hay categorías. Agrega una arriba.
+              </p>
+            )}
           </div>
         </div>
       )}
 
-       {isAdmin && (
+      {/* IMPORTAR CSV */}
+      {isAdmin && (
         <ImportCSV
           endpoint="/import/products"
           entityName="productos"
@@ -221,29 +467,57 @@ const Products = () => {
           <form onSubmit={handleSubmit} className="grid-form">
             <div className="form-group">
               <label>Nombre *</label>
-              <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+              <input
+                value={form.name}
+                onChange={e => setForm({...form, name: e.target.value})}
+                required
+              />
             </div>
             <div className="form-group">
               <label>Categoría</label>
-              <select value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              <select
+                value={form.category}
+                onChange={e => setForm({...form, category: e.target.value})}
+              >
+                {categories.length === 0
+                  ? <option value="">Sin categorías — crea una primero</option>
+                  : categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)
+                }
               </select>
             </div>
             <div className="form-group">
               <label>Precio (COP) *</label>
-              <input type="number" step="100" value={form.price} onChange={e => setForm({...form, price: e.target.value})} placeholder="Ej: 25000" required />
+              <input
+                type="number" step="100"
+                value={form.price}
+                onChange={e => setForm({...form, price: e.target.value})}
+                placeholder="Ej: 25000"
+                required
+              />
             </div>
             <div className="form-group">
               <label>Stock</label>
-              <input type="number" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} />
+              <input
+                type="number" min="0"
+                value={form.stock}
+                onChange={e => setForm({...form, stock: e.target.value})}
+              />
             </div>
             <div className="form-group full-width">
               <label>Descripción</label>
-              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows="2" />
+              <textarea
+                value={form.description}
+                onChange={e => setForm({...form, description: e.target.value})}
+                rows="2"
+              />
             </div>
             <div className="form-group full-width">
               <label>Imagen del producto</label>
-              <ImageUpload value={form.image_url} onChange={url => setForm({...form, image_url: url})} placeholder="URL de la imagen" />
+              <ImageUpload
+                value={form.image_url}
+                onChange={url => setForm({...form, image_url: url})}
+                placeholder="URL o sube una imagen"
+              />
             </div>
             <div className="form-actions full-width">
               <button type="submit" className="btn-primary">Crear Producto</button>
@@ -252,106 +526,91 @@ const Products = () => {
         </div>
       )}
 
-      {/* MODAL VENTA */}
-      {showSell && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Registrar Venta</h3>
-            <form onSubmit={handleSell} className="grid-form">
-              <div className="form-group">
-                <label>Cantidad</label>
-                <input type="number" min="1" value={sellForm.quantity} onChange={e => setSellForm({...sellForm, quantity: e.target.value})} required />
-              </div>
-              <div className="form-group">
-                <label>Cliente (opcional)</label>
-                <select value={sellForm.owner_id} onChange={e => setSellForm({...sellForm, owner_id: e.target.value})}>
-                  <option value="">Sin cliente</option>
-                  {owners.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </div>
-              <div className="form-actions full-width">
-                <button type="submit" className="btn-primary">Confirmar Venta</button>
-                <button type="button" className="btn-secondary" onClick={() => setShowSell(null)}>Cancelar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EDITAR PRODUCTO */}
-      {editId && (
-        <div className="modal-overlay">
-          <div className="modal" style={{ maxWidth: '550px' }}>
-            <h3>Editar Producto</h3>
-            <form onSubmit={handleUpdate} className="grid-form">
-              <div className="form-group">
-                <label>Nombre *</label>
-                <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} required />
-              </div>
-              <div className="form-group">
-                <label>Categoría</label>
-                <select value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}>
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Precio (COP) *</label>
-                <input type="number" step="100" value={editForm.price} onChange={e => setEditForm({...editForm, price: e.target.value})} required />
-              </div>
-              <div className="form-group">
-                <label>Stock</label>
-                <input type="number" value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} />
-              </div>
-              <div className="form-group full-width">
-                <label>Descripción</label>
-                <textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} rows="2" />
-              </div>
-              <div className="form-group full-width">
-                <label>Imagen del producto</label>
-                <ImageUpload value={editForm.image_url} onChange={url => setEditForm({...editForm, image_url: url})} placeholder="URL de la imagen" />
-              </div>
-              <div className="form-actions full-width">
-                <button type="submit" className="btn-primary">Guardar cambios</button>
-                <button type="button" className="btn-secondary" onClick={() => setEditId(null)}>Cancelar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* TOOLBAR */}
       <div className="toolbar">
-        <input className="search-input" placeholder="Buscar por nombre, categoría..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input
+          className="search-input"
+          placeholder="Buscar por nombre, categoría..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {filtered.length > 0 && (
+          <button className="btn-secondary btn-sm" onClick={toggleSelectAll}>
+            {selectAll ? '☑️ Deseleccionar todo' : '☐ Seleccionar todo'}
+          </button>
+        )}
       </div>
 
+      {/* CARDS DE PRODUCTOS */}
       <div className="cards-grid">
         {filtered.map(p => (
-          <div key={p.id} className="cut-card">
+          <div
+            key={p.id}
+            className="cut-card"
+            style={{ position: 'relative', cursor: 'pointer' }}
+            onClick={() => !editId && setSelectedProduct(p)}
+          >
+            {/* Checkbox selección */}
+            <input
+              type="checkbox"
+              checked={selected.includes(p.id)}
+              onChange={() => toggleSelect(p.id)}
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: 'absolute', top: '0.75rem', left: '0.75rem',
+                zIndex: 2, width: '18px', height: '18px', cursor: 'pointer'
+              }}
+            />
+
+            {/* Imagen */}
             {p.image_url
-              ? <img src={p.image_url} alt={p.name} className="cut-image" onError={e => e.target.style.display = 'none'} />
+              ? <img
+                  src={p.image_url}
+                  alt={p.name}
+                  className="cut-image"
+                  onError={e => e.target.style.display = 'none'}
+                />
               : <div className="cut-placeholder">🛍️</div>
             }
+
+            {/* Info */}
             <div className="cut-info">
               <h3>{p.name}</h3>
               <span className="category-badge" style={{ textTransform: 'capitalize' }}>{p.category}</span>
               {p.description && <p className="cut-desc">{p.description}</p>}
               <p className="cut-price">{formatCOP(p.price)}</p>
               <p style={{ fontSize: '0.85rem', color: p.stock < 10 ? 'var(--danger)' : 'var(--success)' }}>
-                Stock: {p.stock} unidades
+                Stock: {p.stock} unidades {p.stock < 10 ? '⚠️' : '✅'}
               </p>
             </div>
-            <div className="action-btns" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button className="btn-success btn-sm" onClick={() => setShowSell(p.id)}>🛒 Vender</button>
+
+            {/* Acciones */}
+            <div
+              className="action-btns"
+              style={{ justifyContent: 'center', flexWrap: 'wrap' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button className="btn-success btn-sm" onClick={() => setShowSell(p.id)}>
+                🛒 Vender
+              </button>
               {isAdmin && (
                 <>
-                  <button className="btn-secondary btn-sm" onClick={() => handleEdit(p)}>✏️ Editar</button>
-                  <button className="btn-danger btn-sm" onClick={() => handleDelete(p.id)}>🗑️</button>
+                  <button className="btn-secondary btn-sm" onClick={() => handleEdit(p)}>
+                    ✏️ Editar
+                  </button>
+                  <button className="btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
+                    🗑️
+                  </button>
                 </>
               )}
             </div>
           </div>
         ))}
       </div>
-      {filtered.length === 0 && <div className="empty-table">No hay productos</div>}
+
+      {filtered.length === 0 && (
+        <div className="empty-table">No hay productos que mostrar</div>
+      )}
     </div>
   );
 };
