@@ -4,11 +4,11 @@ const pool = require('../config/db');
 const getCuts = async (req, res) => {
   try {
     const { breed } = req.query;
-    let query = 'SELECT * FROM cuts ORDER BY breed ASC';
+    let query = 'SELECT * FROM cuts WHERE deleted_at IS NULL ORDER BY breed ASC';
     let params = [];
 
     if (breed) {
-      query = 'SELECT * FROM cuts WHERE LOWER(breed) LIKE $1 ORDER BY breed ASC';
+      query = 'SELECT * FROM cuts WHERE deleted_at IS NULL AND LOWER(breed) LIKE $1 ORDER BY breed ASC';
       params = [`%${breed.toLowerCase()}%`];
     }
 
@@ -23,7 +23,9 @@ const getCuts = async (req, res) => {
 const getCutById = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM cuts WHERE id = $1', [id]);
+    const result = await pool.query(
+      'SELECT * FROM cuts WHERE id = $1 AND deleted_at IS NULL', [id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Corte no encontrado' });
     }

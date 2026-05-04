@@ -7,6 +7,7 @@ const getPets = async (req, res) => {
       SELECT p.*, o.name AS owner_name, o.phone AS owner_phone
       FROM pets p
       JOIN owners o ON p.owner_id = o.id
+      WHERE p.deleted_at IS NULL AND o.deleted_at IS NULL
       ORDER BY p.created_at DESC
     `);
     res.json(result.rows);
@@ -23,7 +24,7 @@ const getPetById = async (req, res) => {
       SELECT p.*, o.name AS owner_name, o.phone AS owner_phone
       FROM pets p
       JOIN owners o ON p.owner_id = o.id
-      WHERE p.id = $1
+      WHERE p.id = $1 AND p.deleted_at IS NULL AND o.deleted_at IS NULL
     `, [id]);
 
     if (pet.rows.length === 0) {

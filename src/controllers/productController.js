@@ -4,7 +4,7 @@ const pool = require('../config/db');
 const getProducts = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM products ORDER BY created_at DESC'
+      'SELECT * FROM products WHERE deleted_at IS NULL ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -16,7 +16,9 @@ const getProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    const result = await pool.query(
+      'SELECT * FROM products WHERE id = $1 AND deleted_at IS NULL', [id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }

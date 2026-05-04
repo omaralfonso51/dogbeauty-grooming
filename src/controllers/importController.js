@@ -505,39 +505,43 @@ const undoImport = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Verificar que el lote existe y no fue deshecho
     const batch = await client.query(
       'SELECT * FROM import_batches WHERE id=$1', [batchId]
     );
 
     if (batch.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Lote de importación no encontrado' });
     }
 
     if (batch.rows[0].undone) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Este lote ya fue deshecho anteriormente' });
     }
 
     const entityType = batch.rows[0].entity_type;
     let undoneCount = 0;
 
-    // Soft delete según tipo de entidad
     if (entityType === 'owners') {
-      const result = await client.query(
-        `UPDATE owners SET deleted_at=NOW(), updated_at=NOW()
-         WHERE import_batch_id=$1 AND deleted_at IS NULL
-         RETURNING id`,
+      const ownerIds = await client.query(
+        `SELECT id FROM owners WHERE import_batch_id=$1 AND deleted_at IS NULL`,
         [batchId]
       );
-      undoneCount = result.rows.length;
-      // También soft delete las mascotas de esos dueños
-      for (const row of result.rows) {
+      for (const row of ownerIds.rows) {
         await client.query(
           `UPDATE pets SET deleted_at=NOW(), updated_at=NOW()
            WHERE owner_id=$1 AND deleted_at IS NULL`,
           [row.id]
         );
       }
+      const result = await client.query(
+        `UPDATE owners SET deleted_at=NOW(), updated_at=NOW()
+         WHERE import_batch_id=$1 AND deleted_at IS NULL
+         RETURNING id`,
+        [batchId]
+      );
+      undoneCount = result.rowCount;
+
     } else if (entityType === 'pets') {
       const result = await client.query(
         `UPDATE pets SET deleted_at=NOW(), updated_at=NOW()
@@ -545,7 +549,8 @@ const undoImport = async (req, res) => {
          RETURNING id`,
         [batchId]
       );
-      undoneCount = result.rows.length;
+      undoneCount = result.rowCount;
+
     } else if (entityType === 'products') {
       const result = await client.query(
         `UPDATE products SET deleted_at=NOW(), updated_at=NOW()
@@ -553,21 +558,22 @@ const undoImport = async (req, res) => {
          RETURNING id`,
         [batchId]
       );
-      undoneCount = result.rows.length;
+      undoneCount = result.rowCount;
+
     } else if (entityType === 'cuts') {
-      // Para cuts verificar que no tengan citas
-      const cutsWithAppts = await client.query(
-        `SELECT c.id FROM cuts c
+      const withAppts = await client.query(
+        `SELECT COUNT(*) FROM cuts c
          JOIN appointments a ON a.cut_id = c.id
-         WHERE c.import_batch_id=$1 AND c.deleted_at IS NULL
+         WHERE c.import_batch_id=$1
+         AND c.deleted_at IS NULL
          AND a.status != 'cancelled'`,
         [batchId]
       );
 
-      if (cutsWithAppts.rows.length > 0) {
+      if (parseInt(withAppts.rows[0].count) > 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({
-          error: `No se puede deshacer: ${cutsWithAppts.rows.length} corte(s) tienen citas activas asociadas`
+          error: `No se puede deshacer: ${withAppts.rows[0].count} corte(s) tienen citas activas`
         });
       }
 
@@ -577,19 +583,17 @@ const undoImport = async (req, res) => {
          RETURNING id`,
         [batchId]
       );
-      undoneCount = result.rows.length;
+      undoneCount = result.rowCount;
     }
 
-    // Marcar lote como deshecho
     await client.query(
       `UPDATE import_batches SET undone=TRUE, undone_at=NOW() WHERE id=$1`,
       [batchId]
     );
 
-    // Log auditoría
     await logAudit(client, {
       userId, action: 'UNDO_IMPORT', entityType,
-      entityId: null, oldData: null,
+      entityId: null,
       newData: { batchId, undoneCount },
       batchId, ip
     });
@@ -604,6 +608,7 @@ const undoImport = async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error('Error undoImport:', err);
     res.status(500).json({ error: `Error al deshacer: ${err.message}` });
   } finally {
     client.release();
@@ -627,30 +632,42 @@ const recoverImport = async (req, res) => {
     );
 
     if (batch.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Lote no encontrado' });
     }
 
     if (!batch.rows[0].undone) {
-      return res.status(400).json({ error: 'Este lote no ha sido deshecho' });
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Este lote no ha sido deshecho, no hay nada que recuperar' });
     }
 
     const entityType = batch.rows[0].entity_type;
+    const tableMap = { owners: 'owners', pets: 'pets', products: 'products', cuts: 'cuts' };
+    const table = tableMap[entityType];
     let recoveredCount = 0;
 
-    const tableMap = {
-      owners: 'owners', pets: 'pets',
-      products: 'products', cuts: 'cuts'
-    };
-
-    const table = tableMap[entityType];
     if (table) {
       const result = await client.query(
-        `UPDATE ${table} SET deleted_at=NULL, updated_at=NOW()
+        `UPDATE ${table}
+         SET deleted_at=NULL, updated_at=NOW()
          WHERE import_batch_id=$1
          RETURNING id`,
         [batchId]
       );
-      recoveredCount = result.rows.length;
+      recoveredCount = result.rowCount;
+
+      if (entityType === 'owners') {
+        const ownerIds = await client.query(
+          `SELECT id FROM owners WHERE import_batch_id=$1`, [batchId]
+        );
+        for (const row of ownerIds.rows) {
+          await client.query(
+            `UPDATE pets SET deleted_at=NULL, updated_at=NOW()
+             WHERE owner_id=$1 AND import_batch_id IS NOT NULL`,
+            [row.id]
+          );
+        }
+      }
     }
 
     await client.query(
@@ -660,7 +677,8 @@ const recoverImport = async (req, res) => {
 
     await logAudit(client, {
       userId, action: 'RECOVER_IMPORT', entityType,
-      entityId: null, newData: { batchId, recoveredCount },
+      entityId: null,
+      newData: { batchId, recoveredCount },
       batchId, ip
     });
 
@@ -674,6 +692,7 @@ const recoverImport = async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error('Error recoverImport:', err);
     res.status(500).json({ error: `Error al recuperar: ${err.message}` });
   } finally {
     client.release();

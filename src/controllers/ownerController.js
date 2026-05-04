@@ -4,7 +4,7 @@ const pool = require('../config/db');
 const getOwners = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM owners ORDER BY created_at DESC'
+      'SELECT * FROM owners WHERE deleted_at IS NULL ORDER BY created_at DESC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -16,13 +16,15 @@ const getOwners = async (req, res) => {
 const getOwnerById = async (req, res) => {
   const { id } = req.params;
   try {
-    const owner = await pool.query('SELECT * FROM owners WHERE id = $1', [id]);
+    const owner = await pool.query(
+      'SELECT * FROM owners WHERE id = $1 AND deleted_at IS NULL', [id]
+    );
     if (owner.rows.length === 0) {
       return res.status(404).json({ error: 'Dueño no encontrado' });
     }
-
-    const pets = await pool.query('SELECT * FROM pets WHERE owner_id = $1', [id]);
-
+    const pets = await pool.query(
+      'SELECT * FROM pets WHERE owner_id = $1 AND deleted_at IS NULL', [id]
+    );
     res.json({ ...owner.rows[0], pets: pets.rows });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener dueño' });
