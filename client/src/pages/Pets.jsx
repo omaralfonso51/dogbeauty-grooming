@@ -5,15 +5,22 @@ import ImageUpload from '../components/ImageUpload';
 import BulkActions from '../components/BulkActions';
 import ImportCSV from '../components/ImportCSV';
 import './Common.css';
+import SafeImage from '../components/SafeImage';
 
 const PetModal = ({ pet, onClose, onEdit, onDelete, isAdmin }) => (
   <div className="card-modal-overlay" onClick={onClose}>
     <div className="card-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
-      <div style={{ position: 'relative', width: '100%', paddingTop: '66%', overflow: 'hidden', borderRadius: '16px 16px 0 0' }}>
-        {pet.photo_url
-          ? <img src={pet.photo_url} alt={pet.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6rem' }}>🐶</div>
-        }
+      <div style={{
+        position: 'relative', width: '100%', paddingTop: '66%',
+        overflow: 'hidden', borderRadius: '16px 16px 0 0'
+      }}>
+        <SafeImage
+          src={pet.photo_url}
+          alt={pet.name}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          fallbackStyle={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', fontSize: '6rem' }}
+          placeholder="🐶"
+        />
       </div>
       <div className="card-modal-body">
         <h2>{pet.name}</h2>
@@ -21,7 +28,9 @@ const PetModal = ({ pet, onClose, onEdit, onDelete, isAdmin }) => (
         <div className="modal-detail"><strong>Dueño:</strong> {pet.owner_name}</div>
         <div className="modal-detail"><strong>Teléfono:</strong> {pet.owner_phone || '-'}</div>
         {pet.notes && <div className="modal-detail"><strong>Notas:</strong> {pet.notes}</div>}
-        <div className="modal-detail"><strong>Registrado:</strong> {new Date(pet.created_at).toLocaleDateString('es-CO')}</div>
+        <div className="modal-detail">
+          <strong>Registrado:</strong> {new Date(pet.created_at).toLocaleDateString('es-CO')}
+        </div>
       </div>
       <div className="card-modal-footer">
         {isAdmin && (
@@ -228,7 +237,13 @@ const Pets = () => {
             ) : (
               <>
                 <div className="pet-photo">
-                  {p.photo_url ? <img src={p.photo_url} alt={p.name} /> : <span>🐶</span>}
+                  <SafeImage
+                    src={p.photo_url}
+                    alt={p.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    fallbackStyle={{ width: '80px', height: '80px', borderRadius: '50%', fontSize: '2rem' }}
+                    placeholder="🐶"
+                  />
                 </div>
                 <div className="pet-info">
                   <h3>{p.name}</h3>

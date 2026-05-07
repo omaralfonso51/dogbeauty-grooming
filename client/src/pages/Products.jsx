@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import ImportCSV from '../components/ImportCSV';
 import BulkActions from '../components/BulkActions';
+import SafeImage from '../components/SafeImage';
 import './Common.css';
 
 // =============================================
@@ -16,18 +17,13 @@ const ProductModal = ({ product, onClose, onEdit, onDelete, isAdmin }) => (
         position: 'relative', width: '100%', paddingTop: '66%',
         overflow: 'hidden', borderRadius: '16px 16px 0 0'
       }}>
-        {product.image_url
-          ? <img
-              src={product.image_url}
-              alt={product.name}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          : <div style={{
-              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-              background: 'var(--accent-light)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: '6rem'
-            }}>🛍️</div>
-        }
+        <SafeImage
+          src={product.image_url}
+          alt={product.name}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          fallbackStyle={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', fontSize: '6rem' }}
+          placeholder="🛍️"
+        />
       </div>
       <div className="card-modal-body">
         <h2>{product.name}</h2>
@@ -563,16 +559,14 @@ const Products = () => {
             />
 
             {/* Imagen */}
-            {p.image_url
-              ? <img
-                  src={p.image_url}
-                  alt={p.name}
-                  className="cut-image"
-                  onError={e => e.target.style.display = 'none'}
-                />
-              : <div className="cut-placeholder">🛍️</div>
-            }
-
+            <SafeImage
+              src={p.image_url}
+              alt={p.name}
+              className="cut-image"
+              style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }}
+              fallbackStyle={{ height: '140px', borderRadius: '8px', fontSize: '3rem', width: '100%' }}
+              placeholder="🛍️"
+            />
             {/* Info */}
             <div className="cut-info">
               <h3>{p.name}</h3>

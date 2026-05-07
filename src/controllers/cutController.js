@@ -83,18 +83,38 @@ const updateCut = async (req, res) => {
 const deleteCut = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(
-      'DELETE FROM cuts WHERE id=$1 RETURNING *', [id]
+    // Verificar citas activas (pending o completed) — canceladas se permiten
+    const activeCitas = await pool.query(
+      `SELECT COUNT(*) FROM appointments 
+       WHERE cut_id = $1 AND status IN ('pending', 'completed')`,
+      [id]
     );
+
+    if (parseInt(activeCitas.rows[0].count) > 0) {
+      return res.status(400).json({
+        error: `No puedes eliminar este corte porque tiene ${activeCitas.rows[0].count} cita(s) activas o completadas asociadas.`
+      });
+    }
+
+    // Si solo tiene citas canceladas, desasociar antes de eliminar
+    await pool.query(
+      `UPDATE appointments SET cut_id = NULL WHERE cut_id = $1 AND status = 'cancelled'`,
+      [id]
+    );
+
+    const result = await pool.query(
+      'DELETE FROM cuts WHERE id = $1 RETURNING *', [id]
+    );
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Corte no encontrado' });
     }
+
     res.json({ message: 'Corte eliminado correctamente' });
   } catch (error) {
-    // Captura específica del error de foreign key de PostgreSQL
     if (error.code === '23503') {
       return res.status(400).json({
-        error: 'No puedes eliminar este corte porque tiene citas asociadas. Primero cancela o elimina las citas relacionadas.'
+        error: 'No puedes eliminar este corte porque tiene citas asociadas.'
       });
     }
     res.status(500).json({ error: 'Error al eliminar corte' });

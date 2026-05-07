@@ -4,16 +4,23 @@ import { useAuth } from '../context/AuthContext';
 import ImageUpload from '../components/ImageUpload';
 import BulkActions from '../components/BulkActions';
 import ImportCSV from '../components/ImportCSV';
+import SafeImage from '../components/SafeImage';
 import './Common.css';
 
 const CutModal = ({ cut, onClose, onEdit, onDelete, isAdmin }) => (
   <div className="card-modal-overlay" onClick={onClose}>
     <div className="card-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
-      <div style={{ position: 'relative', width: '100%', paddingTop: '66%', overflow: 'hidden', borderRadius: '16px 16px 0 0' }}>
-        {cut.image_url
-          ? <img src={cut.image_url} alt={cut.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6rem' }}>✂️</div>
-        }
+      <div style={{
+        position: 'relative', width: '100%', paddingTop: '66%',
+        overflow: 'hidden', borderRadius: '16px 16px 0 0'
+      }}>
+        <SafeImage
+          src={cut.image_url}
+          alt={cut.name}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          fallbackStyle={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', fontSize: '6rem' }}
+          placeholder="✂️"
+        />
       </div>
       <div className="card-modal-body">
         <h2>{cut.name}</h2>
@@ -201,7 +208,14 @@ const Cuts = () => {
               </form>
             ) : (
               <>
-                {c.image_url ? <img src={c.image_url} alt={c.name} className="cut-image" /> : <div className="cut-placeholder">✂️</div>}
+                <SafeImage
+                  src={c.image_url}
+                  alt={c.name}
+                  className="cut-image"
+                  style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }}
+                  fallbackStyle={{ height: '140px', borderRadius: '8px', fontSize: '3rem', width: '100%' }}
+                  placeholder="✂️"
+                />
                 <div className="cut-info">
                   <h3>{c.name}</h3>
                   <p>🐾 {c.breed || 'Todas las razas'}</p>
